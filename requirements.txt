@@ -1,0 +1,2 @@
+# No external dependencies required - Uses Python built-in tkinter library
+# 无需外部依赖 - 使用Python内置的tkinter库
