@@ -8,10 +8,12 @@ from pathlib import Path
 
 
 TARGET_WORDS_PER_LEVEL = 200
+DAILY_FLIP_TARGET = 200
 SUPPORTED_LEVELS = ("B2", "C1", "C2")
 WORKSPACE_ROOT = Path(__file__).resolve().parent
 DELF_JSON_PATH = WORKSPACE_ROOT / "data" / "delf_b2_c2.json"
 DELF_CSV_PATH = WORKSPACE_ROOT / "data" / "delf_b2_c2.csv"
+DAILY_PROGRESS_PATH = WORKSPACE_ROOT / "data" / "daily_flip_progress.json"
 
 
 def _normalize_level(level):

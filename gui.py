@@ -1,7 +1,125 @@
-import tkinter as tk
-from tkinter import messagebox
+import json
 import random
-from vocabulary import get_vocabulary, get_levels, get_random_word, format_word_display
+import tkinter as tk
+from datetime import date
+from tkinter import messagebox
+
+from vocabulary import (
+    DAILY_FLIP_TARGET,
+    DAILY_PROGRESS_PATH,
+    format_word_display,
+    get_levels,
+    get_vocabulary,
+)
+
+
+def _draw_pixel_sprite(canvas, pattern, x0, y0, pixel=4):
+    for y, row in enumerate(pattern):
+        for x, color in enumerate(row):
+            if color:
+                x1 = x0 + x * pixel
+                y1 = y0 + y * pixel
+                canvas.create_rectangle(x1, y1, x1 + pixel, y1 + pixel, fill=color, outline=color)
+
+
+def show_daily_goal_celebration(parent):
+    win = tk.Toplevel(parent)
+    win.title("Objectif atteint !")
+    win.geometry("300x210")
+    win.resizable(False, False)
+    win.config(bg="#f5f1e6")
+    win.attributes("-topmost", True)
+
+    tk.Label(
+        win,
+        text="Bravo !",
+        font=("Arial", 14, "bold"),
+        bg="#f5f1e6",
+        fg="#2f4f4f",
+    ).pack(pady=(8, 2))
+
+    canvas = tk.Canvas(win, width=260, height=92, bg="#f5f1e6", highlightthickness=0)
+    canvas.pack()
+
+    cat = [
+        [None, None, "#f4a261", None, None, None, "#f4a261", None, None],
+        [None, "#f4a261", "#f4a261", "#f4a261", "#f4a261", "#f4a261", "#f4a261", "#f4a261", None],
+        ["#f4a261", "#f4a261", "#f4a261", "#f4a261", "#f4a261", "#f4a261", "#f4a261", "#f4a261", "#f4a261"],
+        ["#f4a261", "#f4a261", "#2d2d2d", "#f4a261", "#f4a261", "#f4a261", "#2d2d2d", "#f4a261", "#f4a261"],
+        ["#f4a261", "#f4a261", "#f4a261", "#f4a261", "#e76f51", "#f4a261", "#f4a261", "#f4a261", "#f4a261"],
+        [None, "#f4a261", "#f4a261", "#f4a261", "#f4a261", "#f4a261", "#f4a261", "#f4a261", None],
+        [None, None, "#f4a261", "#f4a261", "#f4a261", "#f4a261", "#f4a261", None, None],
+    ]
+    dog = [
+        [None, "#8d6e63", None, None, None, None, None, "#8d6e63", None],
+        ["#8d6e63", "#8d6e63", "#d7b899", "#d7b899", "#d7b899", "#d7b899", "#d7b899", "#8d6e63", "#8d6e63"],
+        ["#8d6e63", "#d7b899", "#d7b899", "#d7b899", "#d7b899", "#d7b899", "#d7b899", "#d7b899", "#8d6e63"],
+        ["#d7b899", "#d7b899", "#2d2d2d", "#d7b899", "#d7b899", "#d7b899", "#2d2d2d", "#d7b899", "#d7b899"],
+        ["#d7b899", "#d7b899", "#d7b899", "#d7b899", "#e9c46a", "#d7b899", "#d7b899", "#d7b899", "#d7b899"],
+        [None, "#d7b899", "#d7b899", "#d7b899", "#d7b899", "#d7b899", "#d7b899", "#d7b899", None],
+        [None, None, "#d7b899", "#d7b899", "#d7b899", "#d7b899", "#d7b899", None, None],
+    ]
+    _draw_pixel_sprite(canvas, cat, 36, 12, pixel=6)
+    _draw_pixel_sprite(canvas, dog, 142, 12, pixel=6)
+
+    tk.Label(
+        win,
+        text="Excellent travail ! Tu progresses chaque jour en français !",
+        font=("Arial", 10, "bold"),
+        bg="#f5f1e6",
+        fg="#1f4e79",
+        wraplength=270,
+        justify=tk.CENTER,
+    ).pack(pady=(6, 8))
+
+    tk.Button(
+        win,
+        text="Continuer",
+        command=win.destroy,
+        bg="#8a8a8a",
+        fg="black",
+        font=("Arial", 9, "bold"),
+        padx=8,
+        pady=2,
+    ).pack(pady=(0, 8))
+
+
+class DailyFlipTracker:
+    def __init__(self, target=DAILY_FLIP_TARGET, storage_path=DAILY_PROGRESS_PATH):
+        self.target = target
+        self.storage_path = storage_path
+        self.today = date.today().isoformat()
+        self.count = 0
+        self._load()
+
+    def _load(self):
+        try:
+            if self.storage_path.exists():
+                data = json.loads(self.storage_path.read_text(encoding="utf-8"))
+                if data.get("date") == self.today:
+                    self.count = int(data.get("count", 0))
+        except Exception:
+            self.count = 0
+
+    def _save(self):
+        try:
+            self.storage_path.parent.mkdir(parents=True, exist_ok=True)
+            self.storage_path.write_text(
+                json.dumps({"date": self.today, "count": self.count}, ensure_ascii=False),
+                encoding="utf-8",
+            )
+        except Exception:
+            pass
+
+    def increment(self):
+        self.count += 1
+        self._save()
+        return self.count == self.target
+
+    def status_text(self):
+        remaining = max(self.target - self.count, 0)
+        done = " ✅" if self.count >= self.target else ""
+        return f"Daily flips: {self.count}/{self.target} (remaining: {remaining}){done}"
 
 class FrenchFlashcardApp:
     def __init__(self, root):
@@ -12,10 +130,12 @@ class FrenchFlashcardApp:
         self.root.config(bg="#d3d3d3")
         
         self.current_word = None
+        self.current_card_counted = False
         self.is_showing_chinese = False
         self.is_showing_example = False
         self.word_list = get_vocabulary()
         self.selected_level = tk.StringVar(value="All")
+        self.flip_tracker = DailyFlipTracker()
         
         self.setup_ui()
 
@@ -38,6 +158,15 @@ class FrenchFlashcardApp:
         title_label = tk.Label(title_frame, text="French Vocabulary Flashcard", 
                               font=("Arial", 12, "bold"), bg="#d3d3d3")
         title_label.pack()
+
+        self.daily_counter_label = tk.Label(
+            title_frame,
+            text=self.flip_tracker.status_text(),
+            font=("Arial", 9),
+            bg="#d3d3d3",
+            fg="#1f4e79",
+        )
+        self.daily_counter_label.pack(pady=(2, 0))
         
         # Level selection
         level_frame = tk.Frame(self.root, bg="#d3d3d3")
@@ -99,6 +228,7 @@ class FrenchFlashcardApp:
             return
         self.is_showing_chinese = False
         self.is_showing_example = False
+        self.current_card_counted = False
         self.current_word = random.choice(self.word_list)
         display_text = format_word_display(self.current_word)
         self.word_label.config(text=display_text, fg="#333333", font=("Arial", 18, "bold"), wraplength=320, justify=tk.CENTER)
@@ -106,6 +236,9 @@ class FrenchFlashcardApp:
         self.next_button.config(state=tk.NORMAL)
         self.show_button.config(state=tk.DISABLED)
         self.example_button.config(state=tk.NORMAL, text="Example")
+
+    def refresh_daily_counter(self):
+        self.daily_counter_label.config(text=self.flip_tracker.status_text())
         
     def flip_card(self):
         """Flip card to show Chinese translation"""
@@ -123,6 +256,12 @@ class FrenchFlashcardApp:
             self.word_label.config(text=self.current_word["chinese"], fg="#5a0b0b")
             self.flip_button.config(text="Show French")
             self.is_showing_chinese = True
+            if not self.current_card_counted:
+                reached_target_now = self.flip_tracker.increment()
+                self.current_card_counted = True
+                self.refresh_daily_counter()
+                if reached_target_now:
+                    show_daily_goal_celebration(self.root)
 
     def show_example(self):
         """Show the example sentence for the current word"""
@@ -149,15 +288,17 @@ class FrenchFlashcardApp:
             self.update_word_list()
             if not self.word_list:
                 return
-        PopupFlashcard(self.root, self.word_list)
+        PopupFlashcard(self.root, self.word_list, self.flip_tracker)
         self.root.withdraw()
 
 
 class PopupFlashcard:
-    def __init__(self, parent, word_list):
+    def __init__(self, parent, word_list, flip_tracker):
         self.parent = parent
         self.word_list = word_list if word_list else []
+        self.flip_tracker = flip_tracker
         self.current_word = None
+        self.current_card_counted = False
         self.is_showing_chinese = False
         self.is_showing_example = False
         
@@ -183,6 +324,15 @@ class PopupFlashcard:
         self.word_label = tk.Label(self.popup, text="Loading...", 
                                   font=("Arial", 20, "bold"), bg="#e0e0e0", fg="#333333", wraplength=300, justify=tk.CENTER)
         self.word_label.pack(fill=tk.BOTH, expand=True, padx=8, pady=10)
+
+        self.counter_label = tk.Label(
+            self.popup,
+            text=self.flip_tracker.status_text(),
+            font=("Arial", 8),
+            bg="#d3d3d3",
+            fg="#1f4e79",
+        )
+        self.counter_label.pack(pady=(0, 4))
         
         # Buttons
         button_frame = tk.Frame(self.popup, bg="#d3d3d3")
@@ -206,6 +356,7 @@ class PopupFlashcard:
         """Show a random word with gender information"""
         self.is_showing_chinese = False
         self.is_showing_example = False
+        self.current_card_counted = False
         self.current_word = random.choice(self.word_list)
         display_text = format_word_display(self.current_word)
         self.word_label.config(text=display_text, fg="#333333", font=("Arial", 20, "bold"), wraplength=300, justify=tk.CENTER)
@@ -224,6 +375,12 @@ class PopupFlashcard:
         else:
             self.word_label.config(text=self.current_word["chinese"], fg="#5a0b0b")
             self.is_showing_chinese = True
+            if not self.current_card_counted:
+                reached_target_now = self.flip_tracker.increment()
+                self.current_card_counted = True
+                self.counter_label.config(text=self.flip_tracker.status_text())
+                if reached_target_now:
+                    show_daily_goal_celebration(self.popup)
 
     def show_example(self):
         """Show the example sentence for the current word"""
