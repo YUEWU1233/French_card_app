@@ -68,14 +68,12 @@ class PixelCatCounter:
         )
 
     def _draw_thought_bubble(self):
-        bx = 60 if self.compact else 86
-        by = 4 if self.compact else 6
+        # Keep the cloud close to the cat so the tail clearly points to its head.
+        bx = 24 if self.compact else 40
+        by = 3 if self.compact else 5
         bw = 82 if self.compact else 112
         bh = 22 if self.compact else 24
         self.canvas.create_oval(bx, by, bx + bw, by + bh, fill="#ffffff", outline="#5f5f5f")
-        self.canvas.create_oval(bx - 8, by + 9, bx + 7, by + 21, fill="#ffffff", outline="#5f5f5f")
-        self.canvas.create_oval(bx - 13, by + bh + 2, bx - 5, by + bh + 10, fill="#ffffff", outline="#5f5f5f")
-        self.canvas.create_oval(bx - 18, by + bh + 8, bx - 13, by + bh + 13, fill="#ffffff", outline="#5f5f5f")
         remaining = max(self.target - self.count, 0)
         self.canvas.create_text(
             bx + bw // 2,
