@@ -22,6 +22,70 @@ def _draw_pixel_sprite(canvas, pattern, x0, y0, pixel=4):
                 canvas.create_rectangle(x1, y1, x1 + pixel, y1 + pixel, fill=color, outline=color)
 
 
+class PixelCatCounter:
+    """Tiny pixel cat + thought bubble with remaining fish."""
+
+    def __init__(self, parent, target, initial_count=0, compact=False):
+        self.target = target
+        self.count = max(0, int(initial_count))
+        self.compact = compact
+        self.pixel = 2 if compact else 3
+        self.frame = tk.Frame(parent, bg="#d3d3d3")
+        self.canvas = tk.Canvas(
+            self.frame,
+            width=148 if compact else 210,
+            height=30 if compact else 36,
+            bg="#d3d3d3",
+            highlightthickness=0,
+        )
+        self.canvas.pack()
+        self.refresh(self.count)
+
+    def refresh(self, count):
+        self.count = max(0, int(count))
+        self.canvas.delete("all")
+        self._draw_cat()
+        self._draw_thought_bubble()
+
+    def _draw_cat(self):
+        # Further refined tiny gray cat (closer to reference style).
+        cat = [
+            [None, None, "#5f6062", None, None, None, None, "#5f6062", None, None],
+            [None, "#5f6062", "#bfc0c2", "#5f6062", None, None, "#5f6062", "#bfc0c2", "#5f6062", None],
+            ["#5f6062", "#bfc0c2", "#a6a7a9", "#bfc0c2", "#5f6062", "#5f6062", "#bfc0c2", "#a6a7a9", "#bfc0c2", "#5f6062"],
+            ["#5f6062", "#bfc0c2", "#bfc0c2", "#bfc0c2", "#bfc0c2", "#bfc0c2", "#bfc0c2", "#bfc0c2", "#bfc0c2", "#5f6062"],
+            ["#5f6062", "#bfc0c2", "#2a2a2a", "#bfc0c2", "#ececec", "#ececec", "#bfc0c2", "#2a2a2a", "#bfc0c2", "#5f6062"],
+            ["#5f6062", "#bfc0c2", "#bfc0c2", "#ececec", "#2a2a2a", "#ececec", "#ececec", "#bfc0c2", "#bfc0c2", "#5f6062"],
+            [None, "#5f6062", "#bfc0c2", "#ececec", "#2a4f9d", "#2a4f9d", "#2a4f9d", "#ececec", "#5f6062", None],
+            [None, None, "#5f6062", "#bfc0c2", "#d7d8da", "#ffd700", "#d7d8da", "#5f6062", None, None],
+        ]
+        _draw_pixel_sprite(
+            self.canvas,
+            cat,
+            4 if self.compact else 6,
+            5 if self.compact else 7,
+            pixel=self.pixel,
+        )
+
+    def _draw_thought_bubble(self):
+        bx = 60 if self.compact else 86
+        by = 4 if self.compact else 6
+        bw = 82 if self.compact else 112
+        bh = 22 if self.compact else 24
+        self.canvas.create_oval(bx, by, bx + bw, by + bh, fill="#ffffff", outline="#5f5f5f")
+        self.canvas.create_oval(bx - 8, by + 9, bx + 7, by + 21, fill="#ffffff", outline="#5f5f5f")
+        self.canvas.create_oval(bx - 13, by + bh + 2, bx - 5, by + bh + 10, fill="#ffffff", outline="#5f5f5f")
+        self.canvas.create_oval(bx - 18, by + bh + 8, bx - 13, by + bh + 13, fill="#ffffff", outline="#5f5f5f")
+        remaining = max(self.target - self.count, 0)
+        self.canvas.create_text(
+            bx + bw // 2,
+            by + bh // 2 + 1,
+            text=f"🐟*{remaining}",
+            font=("Arial", 7 if self.compact else 8, "bold"),
+            fill="#1f4e79",
+        )
+
+
 def show_daily_goal_celebration(parent):
     win = tk.Toplevel(parent)
     win.title("Objectif atteint !")
@@ -159,14 +223,13 @@ class FrenchFlashcardApp:
                               font=("Arial", 12, "bold"), bg="#d3d3d3")
         title_label.pack()
 
-        self.daily_counter_label = tk.Label(
+        self.daily_counter_widget = PixelCatCounter(
             title_frame,
-            text=self.flip_tracker.status_text(),
-            font=("Arial", 9),
-            bg="#d3d3d3",
-            fg="#1f4e79",
+            target=self.flip_tracker.target,
+            initial_count=self.flip_tracker.count,
+            compact=False,
         )
-        self.daily_counter_label.pack(pady=(2, 0))
+        self.daily_counter_widget.frame.pack(pady=(2, 0))
         
         # Level selection
         level_frame = tk.Frame(self.root, bg="#d3d3d3")
@@ -238,7 +301,7 @@ class FrenchFlashcardApp:
         self.example_button.config(state=tk.NORMAL, text="Example")
 
     def refresh_daily_counter(self):
-        self.daily_counter_label.config(text=self.flip_tracker.status_text())
+        self.daily_counter_widget.refresh(self.flip_tracker.count)
         
     def flip_card(self):
         """Flip card to show Chinese translation"""
@@ -325,14 +388,13 @@ class PopupFlashcard:
                                   font=("Arial", 20, "bold"), bg="#e0e0e0", fg="#333333", wraplength=300, justify=tk.CENTER)
         self.word_label.pack(fill=tk.BOTH, expand=True, padx=8, pady=10)
 
-        self.counter_label = tk.Label(
+        self.counter_widget = PixelCatCounter(
             self.popup,
-            text=self.flip_tracker.status_text(),
-            font=("Arial", 8),
-            bg="#d3d3d3",
-            fg="#1f4e79",
+            target=self.flip_tracker.target,
+            initial_count=self.flip_tracker.count,
+            compact=True,
         )
-        self.counter_label.pack(pady=(0, 4))
+        self.counter_widget.frame.pack(pady=(0, 4))
         
         # Buttons
         button_frame = tk.Frame(self.popup, bg="#d3d3d3")
@@ -378,7 +440,7 @@ class PopupFlashcard:
             if not self.current_card_counted:
                 reached_target_now = self.flip_tracker.increment()
                 self.current_card_counted = True
-                self.counter_label.config(text=self.flip_tracker.status_text())
+                self.counter_widget.refresh(self.flip_tracker.count)
                 if reached_target_now:
                     show_daily_goal_celebration(self.popup)
 
