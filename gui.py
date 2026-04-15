@@ -29,12 +29,12 @@ class PixelCatCounter:
         self.target = target
         self.count = max(0, int(initial_count))
         self.compact = compact
-        self.pixel = 2 if compact else 3
+        self.pixel = 2 if compact else 4
         self.frame = tk.Frame(parent, bg="#d3d3d3")
         self.canvas = tk.Canvas(
             self.frame,
-            width=148 if compact else 210,
-            height=30 if compact else 36,
+            width=148 if compact else 224,
+            height=30 if compact else 44,
             bg="#d3d3d3",
             highlightthickness=0,
         )
@@ -69,17 +69,17 @@ class PixelCatCounter:
 
     def _draw_thought_bubble(self):
         # Keep the cloud close to the cat so the tail clearly points to its head.
-        bx = 24 if self.compact else 40
-        by = 3 if self.compact else 5
-        bw = 82 if self.compact else 112
-        bh = 22 if self.compact else 24
+        bx = 24 if self.compact else 62
+        by = 3 if self.compact else 4
+        bw = 82 if self.compact else 132
+        bh = 22 if self.compact else 30
         self.canvas.create_oval(bx, by, bx + bw, by + bh, fill="#ffffff", outline="#5f5f5f")
         remaining = max(self.target - self.count, 0)
         self.canvas.create_text(
             bx + bw // 2,
             by + bh // 2 - (3 if self.compact else 4),
             text=f"🐟*{remaining}",
-            font=("Arial", 7 if self.compact else 8, "bold"),
+            font=("Arial", 7 if self.compact else 10, "bold"),
             fill="#1f4e79",
         )
         encouragement = self._encouragement_for_remaining(remaining)
@@ -88,7 +88,7 @@ class PixelCatCounter:
                 bx + bw // 2,
                 by + bh // 2 + (5 if self.compact else 6),
                 text=encouragement,
-                font=("Arial", 5 if self.compact else 6, "bold"),
+                font=("Arial", 5 if self.compact else 7, "bold"),
                 fill="#2f6f2f",
             )
 
@@ -232,13 +232,9 @@ class FrenchFlashcardApp:
         
     def setup_ui(self):
         """Setup the user interface"""
-        # Title
+        # Header
         title_frame = tk.Frame(self.root, bg="#d3d3d3")
         title_frame.pack(fill=tk.X, padx=5, pady=5)
-        
-        title_label = tk.Label(title_frame, text="French Vocabulary Flashcard", 
-                              font=("Arial", 12, "bold"), bg="#d3d3d3")
-        title_label.pack()
 
         self.daily_counter_widget = PixelCatCounter(
             title_frame,
@@ -246,7 +242,7 @@ class FrenchFlashcardApp:
             initial_count=self.flip_tracker.count,
             compact=False,
         )
-        self.daily_counter_widget.frame.pack(pady=(2, 0))
+        self.daily_counter_widget.frame.pack(pady=(0, 0))
         
         # Level selection
         level_frame = tk.Frame(self.root, bg="#d3d3d3")
