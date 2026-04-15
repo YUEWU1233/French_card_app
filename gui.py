@@ -77,11 +77,30 @@ class PixelCatCounter:
         remaining = max(self.target - self.count, 0)
         self.canvas.create_text(
             bx + bw // 2,
-            by + bh // 2 + 1,
+            by + bh // 2 - (3 if self.compact else 4),
             text=f"🐟*{remaining}",
             font=("Arial", 7 if self.compact else 8, "bold"),
             fill="#1f4e79",
         )
+        encouragement = self._encouragement_for_remaining(remaining)
+        if encouragement:
+            self.canvas.create_text(
+                bx + bw // 2,
+                by + bh // 2 + (5 if self.compact else 6),
+                text=encouragement,
+                font=("Arial", 5 if self.compact else 6, "bold"),
+                fill="#2f6f2f",
+            )
+
+    @staticmethod
+    def _encouragement_for_remaining(remaining):
+        if remaining == 150:
+            return "Super, continue !"
+        if remaining == 100:
+            return "Bravo, tu avances !"
+        if remaining == 50:
+            return "Presque fini !"
+        return ""
 
 
 def show_daily_goal_celebration(parent):
